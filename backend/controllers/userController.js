@@ -1,23 +1,24 @@
 import { User } from "../models/userModel.js";
 import { asyncHandler } from "../middleware/asyncHandler.js"
 import ErrorHandler from "../middleware/errorMiddleware.js";
+import jwt from "jsonwebtoken"
 
 
 
 
 const generateAccessAndRefereshToken = async (userId) => {
     try {
-        const user = await User.findById(userId)
-        const accessToken = user.generateAccessToken()
-        const refreshToken = user.generateRefreshToken()
+        const user = await User.findById(userId);
+        const accessToken = user.generateAccessToken();
+        const newRefreshToken = user.generateRefreshToken(); // Generate a new refresh token
 
-        user.refreshToken = refreshToken
-        await user.save({ validateBeforeSave: false })
+        user.refreshToken = newRefreshToken; // Update with the new refresh token
+        await user.save({ validateBeforeSave: false });
 
-        return { accessToken, refreshToken }
+        return { accessToken, refreshToken: newRefreshToken }; // Return the new refresh token
 
     } catch (error) {
-        return next(new ErrorHandler("Something wennt wrong while generating refresh & access token", 500))
+        return next(new ErrorHandler("Something went wrong while generating refresh & access token", 500));
     }
 }
 
@@ -119,50 +120,53 @@ export const logout = asyncHandler(async (req, res, next) => {
     })
 });
 
-export const refreshAccessToken = asyncHandler(async (req, res)=>{
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+export const refreshAccessToken = asyncHandler(async (req, res, next) => {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
-    if (!incomingRefreshToken){
-        return next(new ErrorHandler("Unauthorized Request", 401))
+    if (!incomingRefreshToken) {
+        return next(new ErrorHandler("Unauthorized Request", 401));
     }
 
     try {
         const decodedToken = jwt.verify(
             incomingRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
-        )
-    
-        const user = await User.findById(decodedToken?._id)
-    
-        if (!user){
-            return next(new ErrorHandler("Invalid Refresh Token", 401))
+        );
+
+        const user = await User.findById(decodedToken?._id);
+
+        if (!user) {
+            return next(new ErrorHandler("Invalid Refresh Token", 401));
         }
-    
-        if (incomingRefreshToken !== user?.refreshToken){
-            return next(new ErrorHandler("Refresh Token is expired or used", 401))
+
+        if (incomingRefreshToken !== user?.refreshToken) {
+            return next(new ErrorHandler("Refresh Token is expired or used", 401));
         }
-    
+
         const options = {
             httpOnly: true,
             secure: true
-        }
-    
-        const {accessToken, newRefreshToken} = await generateAccessAndRefereshToken(user._id)
-    
+        };
+
+        const accessToken = user.generateAccessToken();
+        const newRefreshToken = user.generateRefreshToken(); // Generate a new refresh token here
+
+        // Update user with the new refresh token
+        user.refreshToken = newRefreshToken;
+        await user.save({ validateBeforeSave: false });
+
         return res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
-        .json (
-            {
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", newRefreshToken, options) // Send the new refresh token
+            .json({
                 success: true,
                 message: "Access Token Refreshed Successfully"
-            }
-        )
+            });
     } catch (error) {
-        return next(new ErrorHandler( error?.message ||"Invalid Refresh Token", 401))
+        return next(new ErrorHandler(error?.message || "Invalid Refresh Token", 401));
     }
-})
+});
 
 export const changeCurrentPassword = asyncHandler(async(req,res)=>{
     const {oldPassword, newPassword} = req.body
@@ -195,11 +199,11 @@ export const allUsers = asyncHandler(async (req, res) => {
       ? {
           $or: [
             { name: { $regex: req.query.search, $options: "i" } },
-            { email: { $regex: req.query.search, $options: "i" } },
+            { username: { $regex: req.query.search, $options: "i" } },
           ],
         }
       : {};
   
-    const users = await User.find(keyword).find({ _id: { $ne: req.user._id } }).select("-password");
+    const users = await User.find(keyword).find({ _id: { $ne: req.user._id } }).select("-password -refreshToken");
     res.send(users);
   });
