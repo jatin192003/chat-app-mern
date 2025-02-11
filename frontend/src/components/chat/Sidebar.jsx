@@ -1,20 +1,24 @@
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import ChatListItem from './ChatListItem';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchChats, setSelectedChat } from '../../store/slice/ChatSlice';
+import { accessChat, fetchChats, setSelectedChat } from '../../store/slice/ChatSlice';
 import { getSender, getSenderFull } from '../../logic/chat';
 import { getOtherUser } from '../../store/slice/authSlice';
 import { debounce } from 'lodash';
 import { LuMessageCirclePlus } from "react-icons/lu";
 
-export default function Sidebar() {
+// NEW: Add onChatSelect prop
+export default function Sidebar({ onChatSelect }) {
     const dispatch = useDispatch();
     const loggedUser = useSelector(state => state.auth.user);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const inputRef = useRef(null);
+    const dropdownRef = useRef(null); // NEW: Ref for the dropdown list
 
     const handleChatClick = (chat) => {
         dispatch(setSelectedChat(chat));
+        // NEW: Call onChatSelect to show ChatWindow on mobile/tablet
+        onChatSelect();
     };
 
     useEffect(() => {
@@ -43,14 +47,25 @@ export default function Sidebar() {
     };
 
     const searchedUsers = useSelector(state => state.auth.otherUser);
-    console.log(searchedUsers);
 
     // Function to close the dropdown when clicking outside
     const handleClickOutside = (event) => {
-        if (inputRef.current && !inputRef.current.contains(event.target)) {
+        if (
+            inputRef.current && 
+            !inputRef.current.contains(event.target) && 
+            dropdownRef.current && 
+            !dropdownRef.current.contains(event.target)
+        ) {
             setIsDropdownOpen(false);
         }
     };
+
+    const handleSearchedUserClick = (userId) =>{
+        console.log("clicked");
+        console.log(userId);
+        dispatch(accessChat(userId))
+        setIsDropdownOpen(false);
+    }
 
     useEffect(() => {
         document.addEventListener('mousedown', handleClickOutside);
@@ -60,7 +75,7 @@ export default function Sidebar() {
     }, []);
 
     return (
-        <div className="flex flex-col w-1/4 bg-base-100 m-2 rounded-lg relative">
+        <div className="flex flex-col h-[calc(100vh-80px)] bg-base-100 m-2 rounded-lg">
             <div className="w-full p-3">
                 <label className="input input-bordered flex items-center gap-2 relative">
                     <input
@@ -84,9 +99,11 @@ export default function Sidebar() {
                     </svg>
                     {/* Dropdown */}
                     {isDropdownOpen && searchedUsers.length > 0 && (
-                        <ul className="absolute top-full left-0 w-full bg-base-100 shadow-md rounded-lg mt-2 z-10 max-h-60 overflow-y-auto">
+                        <ul ref={dropdownRef} className="absolute top-full left-0 w-full bg-base-100 shadow-md rounded-lg mt-2 z-10 max-h-60 overflow-y-auto">
                             {searchedUsers.map((user) => (
-                                <li key={user._id} className="p-2 hover:bg-base-300 cursor-pointer">
+                                <li key={user._id} className="p-2 hover:bg-base-300 cursor-pointer" onClick={()=>{
+                                    handleSearchedUserClick(user._id)
+                                }}>
                                     <div className="flex items-center justify-between">
                                         <div className='flex items-center'>
                                             <img
@@ -104,7 +121,8 @@ export default function Sidebar() {
                     )}
                 </label>
             </div>
-            <div>
+            {/* NEW: Add overflow-y-auto and flex-grow to make the chat list scrollable */}
+            <div className='overflow-y-auto flex-grow'>
                 {chats.map((items) => {
                     return (
                         <div onClick={()=>{handleChatClick(items)}} key={items._id}>

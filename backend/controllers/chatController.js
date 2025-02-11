@@ -7,29 +7,37 @@ export const accessChat = asyncHandler(async (req, res, next) => {
     const { userId } = req.body;
 
     if (!userId) {
-        return next(new ErrorHandler("UserId param not sent with request", 400))
+        return next(new ErrorHandler("UserId param not sent with request", 400));
     }
 
-    var isChat = await Chat.find({
+    console.log("Request user ID: ", req.user._id);
+    console.log("Target user ID: ", userId);
+
+    let isChat = await Chat.find({
         isGroupChat: false,
         $and: [
             { users: { $elemMatch: { $eq: req.user._id } } },
             { users: { $elemMatch: { $eq: userId } } },
         ],
     })
-        .populate("users", "-password -refreshToken",)
+        .populate("users", "-password -refreshToken")
         .populate("latestMessage");
+
+    // Log the result of the initial chat search
+    console.log("Chat found:", isChat);
 
     isChat = await User.populate(isChat, {
         path: "latestMessage.sender",
-        select: "fullName username profilePhoto email ",
-
+        select: "fullName username profilePhoto email",
     });
 
+    console.log("Populated chat:", isChat);
+
     if (isChat.length > 0) {
-        res.send(isChat[0]);
+        return res.send(isChat[0]);
     } else {
-        var chatData = {
+        // Create new chat if no existing chat
+        const chatData = {
             chatName: "sender",
             isGroupChat: false,
             users: [req.user._id, userId],
@@ -39,15 +47,18 @@ export const accessChat = asyncHandler(async (req, res, next) => {
             const createdChat = await Chat.create(chatData);
             const FullChat = await Chat.findOne({ _id: createdChat._id }).populate(
                 "users",
-                "-password",
-                "-refreshToken"
+                "-password -refreshToken"
             );
-            res.status(200).json(FullChat);
+
+            console.log("Created new chat:", FullChat);
+            return res.status(200).json(FullChat);
         } catch (error) {
-            return next(new ErrorHandler(error.message, 400))
+            console.error("Error creating chat:", error);
+            return next(new ErrorHandler(error.message, 400));
         }
     }
 });
+
 
 export const fetchChats = asyncHandler(async (req, res, next) => {
     try {
