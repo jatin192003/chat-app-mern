@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/chat/Navbar';
 import Sidebar from '../components/chat/Sidebar';
 import ChatWindow from '../components/chat/ChatWindow';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import io from "socket.io-client";
+import { setSocket, setOnlineUsers } from '../store/slice/socketSlice';  // Import your actions
 
 export default function ChatPage() {
   const [showChatWindow, setShowChatWindow] = useState(false);
   const { selectedChat } = useSelector((state) => state.chat);
+  const { user } = useSelector((state) => state.auth);
+  const { onlineUsers } = useSelector((state) => state.socket);  // Get online users from redux
+  const dispatch = useDispatch();
 
   const handleChatSelect = () => {
     setShowChatWindow(true);
@@ -15,6 +20,28 @@ export default function ChatPage() {
   const handleBackToSidebar = () => {
     setShowChatWindow(false);
   };
+
+  useEffect(() => {
+    // Initialize the socket connection
+    const socket = io("http://localhost:3000");
+
+    // Save the socket ID to Redux store (instead of the full socket object)
+    dispatch(setSocket(socket.id));
+
+    if (user){
+      socket.emit('setup', user)
+    }
+
+    // Listen for online users from the server
+    socket.on("online-users", (users) => {
+      dispatch(setOnlineUsers(users));  // Update the online users in Redux store
+    });
+
+    // Cleanup on component unmount
+    return () => {
+      socket.disconnect();
+    };
+  }, [dispatch]);
 
   return (
     <div className='flex flex-col h-screen bg-base-300'>

@@ -15,6 +15,7 @@ export default function ChatWindow({ onBack }) {
 
   const messageEndRef = useRef(null); // To reference the bottom of the chat container
 
+
   useEffect(() => {
     if (selectedChat) {
       dispatch(fetchMessages(selectedChat._id));
@@ -30,9 +31,6 @@ export default function ChatWindow({ onBack }) {
 
   return (
     <>
-      {
-        selectedChat ? (
-          // NEW: Add h-full to make the container take up the full height
           <div className='flex flex-col h-[calc(100vh-80px)] bg-base-100 m-2 rounded-lg'>
             {/* Top Bar */}
             <div className="flex items-center justify-start border-b bg-base-200 rounded-lg border-base-300">
@@ -61,14 +59,6 @@ export default function ChatWindow({ onBack }) {
               <ChatInputBox />
             </div> 
           </div>
-        ) : (
-          <div className='flex items-center justify-center bg-base-100 m-2 rounded-lg h-full'>
-            <div className='text-2xl'>
-              Click on a user to start chatting
-            </div>
-          </div>
-        )
-      }
     </>
   );
 }

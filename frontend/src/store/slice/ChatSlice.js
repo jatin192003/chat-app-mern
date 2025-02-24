@@ -17,7 +17,7 @@ export const fetchChats = createAsyncThunk('chat/fetchChats', async (_, thunkAPI
     try {
         const response = await axiosInstance.get(API_URL + 'fetchChats');
         return response.data;
-
+        
 
     } catch (error) {
         const message = error.response?.data?.message || error.message || error.toString();

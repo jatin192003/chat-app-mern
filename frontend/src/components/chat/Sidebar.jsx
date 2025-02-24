@@ -51,16 +51,16 @@ export default function Sidebar({ onChatSelect }) {
     // Function to close the dropdown when clicking outside
     const handleClickOutside = (event) => {
         if (
-            inputRef.current && 
-            !inputRef.current.contains(event.target) && 
-            dropdownRef.current && 
+            inputRef.current &&
+            !inputRef.current.contains(event.target) &&
+            dropdownRef.current &&
             !dropdownRef.current.contains(event.target)
         ) {
             setIsDropdownOpen(false);
         }
     };
 
-    const handleSearchedUserClick = (userId) =>{
+    const handleSearchedUserClick = (userId) => {
         console.log("clicked");
         console.log(userId);
         dispatch(accessChat(userId))
@@ -101,7 +101,7 @@ export default function Sidebar({ onChatSelect }) {
                     {isDropdownOpen && searchedUsers.length > 0 && (
                         <ul ref={dropdownRef} className="absolute top-full left-0 w-full bg-base-100 shadow-md rounded-lg mt-2 z-10 max-h-60 overflow-y-auto">
                             {searchedUsers.map((user) => (
-                                <li key={user._id} className="p-2 hover:bg-base-300 cursor-pointer" onClick={()=>{
+                                <li key={user._id} className="p-2 hover:bg-base-300 cursor-pointer" onClick={() => {
                                     handleSearchedUserClick(user._id)
                                 }}>
                                     <div className="flex items-center justify-between">
@@ -123,17 +123,21 @@ export default function Sidebar({ onChatSelect }) {
             </div>
             {/* NEW: Add overflow-y-auto and flex-grow to make the chat list scrollable */}
             <div className='overflow-y-auto flex-grow'>
-                {chats.map((items) => {
+            {/* // Inside Sidebar component */}
+                {chats.map((chat) => {
+                    const otherUser = getSenderFull(loggedUser, chat?.users);
                     return (
-                        <div onClick={()=>{handleChatClick(items)}} key={items._id}>
+                        <div onClick={() => handleChatClick(chat)} key={chat._id}>
                             <ChatListItem
-                                profilePicture={getSenderFull(loggedUser, items?.users).profilePhoto}
-                                chatName={getSender(loggedUser, items?.users)}
-                                lastMessage={items?.latestMessage?.content}
+                                profilePicture={otherUser.profilePhoto}
+                                chatName={getSender(loggedUser, chat?.users)}
+                                lastMessage={chat?.latestMessage?.content}
+                                userId={otherUser._id}
                             />
                         </div>
                     );
                 })}
+
             </div>
         </div>
     );

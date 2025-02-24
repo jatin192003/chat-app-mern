@@ -2,6 +2,7 @@ import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { logout } from '../../store/slice/authSlice'
+import { setSelectedChat } from '../../store/slice/ChatSlice'
 
 export default function Navbar() {
     const profilePicture = useSelector(state => state.auth.user.profilePhoto)
@@ -9,6 +10,7 @@ export default function Navbar() {
     const navigate = useNavigate()
 
     const handleLogout = () => {
+        dispatch(setSelectedChat(null))
         dispatch(logout()).unwrap().then(() => {
             navigate("/login");
         })
@@ -16,7 +18,7 @@ export default function Navbar() {
     return (
         <div className="navbar bg-base-100">
             <div className="flex-1">
-                <a className="btn btn-ghost text-xl">daisyUI</a>
+                <a className="btn btn-ghost text-xl">BaatCheet</a>
             </div>
             <div className="flex-none gap-2">
                 <div className="dropdown dropdown-end">
